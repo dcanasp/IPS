@@ -1,0 +1,90 @@
+services:
+  ips:
+    build:
+      context: ./IPS
+      dockerfile: Dockerfile
+    container_name: ips
+    ports:
+      - "8000:8080"
+    networks:
+      - cyber
+
+  victim:
+    build:
+      context: ./victim
+      dockerfile: Dockerfile  
+    container_name: victim
+    expose:
+      - "8080"
+    networks:
+      - cyber 
+  attacker1:
+    build:
+      context: ./attackers/attacker
+    environment:
+      - target_host=http://ips:8080
+      - target_routes=/
+      - concurrency=1
+    networks:
+      - cyber 
+    depends_on:
+      - victim
+    deploy:
+      replicas: 1
+  explorationAttacker:
+    build:
+      context: ./attackers/exploration
+    environment:
+      - target_host=http://ips:8080
+      - target_routes=/
+      - concurrency=1
+    networks:
+      - cyber 
+    depends_on:
+      - victim
+    deploy:
+      replicas: 1
+  slowerAttacker:
+    build:
+      context: ./attackers/slowerFaster
+    environment:
+      - target_host=http://ips:8080
+      - target_routes=/
+      - concurrency=1
+    networks:
+      - cyber 
+    depends_on:
+      - victim
+    deploy:
+      replicas: 1
+
+
+  # attacker1:
+  #   build:
+  #     context: ./attacker
+  #   container_name: attacker1
+  #   environment:
+  #     - target_host=http://victim:8080
+  #     - target_routes=/ddos/login
+  #     - concurrency=30
+  #   networks:
+  #   - cyber 
+  #   depends_on:
+  #     - victim
+
+  # attacker2:
+  #   build:
+  #     context: ./attacker
+  #   container_name: attacker2
+  #   environment:
+  #     - TARGET_HOST=http://victim:8080
+  #     - TARGET_ROUTES=/ddos/login
+  #     - CONCURRENCY=20
+  #   depends_on:
+  #     - victim
+  #   networks:
+  #   - cyber 
+
+networks:
+  cyber:
+    driver: bridge
