@@ -23,7 +23,8 @@ public class TrafficLoggingMiddleware
             Path = context.Request.Path.ToString(),
             Query = context.Request.QueryString.ToString(),
             Headers = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
-            ContentLength = context.Request.ContentLength ?? 0
+            ContentLength = context.Request.ContentLength ?? 0,
+            ResponseCode = context.Response.StatusCode
         };
 
         var key = $"log:{ip}";
@@ -35,12 +36,12 @@ public class TrafficLoggingMiddleware
         logs.Add(record);
 
         // Keep only the last 10 minutes of logs
-        var cutoff = timestamp.AddMinutes(-1);
+        var cutoff = timestamp.AddMinutes(-1);//HERE
         logs = logs.Where(r => r.Timestamp >= cutoff).ToList();
 
         _cache.Set(key, logs, new MemoryCacheEntryOptions
         {
-            SlidingExpiration = TimeSpan.FromMinutes(1)
+            SlidingExpiration = TimeSpan.FromMinutes(1)//HERE
         });
 
         await _next(context);
@@ -55,4 +56,5 @@ public class RequestRecord
     public string Query { get; set; } = string.Empty;
     public Dictionary<string, string> Headers { get; set; } = new();
     public long ContentLength { get; set; }
+    public int ResponseCode { get; set; }
 }

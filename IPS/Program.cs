@@ -2,8 +2,21 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MemoryCache
+builder.Services.AddSingleton<RiskAssessor>();
 builder.Services.AddMemoryCache();
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 
 // Add YARP
 builder.Services.AddReverseProxy()
@@ -24,7 +37,9 @@ builder.Services.AddReverseProxy()
                 ClusterId = "victim-cluster",
                 Destinations = new Dictionary<string, Yarp.ReverseProxy.Configuration.DestinationConfig>
                 {
+                    //{ "dest1", new() { Address = "http://localhost:5282/" } }
                     { "dest1", new() { Address = "http://victim:8080/" } }
+
                 }
             }
         });
@@ -45,7 +60,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.UseMiddleware<EnforcementMiddlewaxre>();
+app.UseMiddleware<EnforcementMiddleware>();
 app.UseMiddleware<TrafficLoggingMiddleware>();
 app.UseMiddleware<ScoringMiddleware>();
 
@@ -65,6 +80,7 @@ app.UseMiddleware<ScoringMiddleware>();
 //});
 
 // Forward everything else
+app.UseCors("AllowAll");
 app.MapReverseProxy();
 
 app.Run();

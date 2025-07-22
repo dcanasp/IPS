@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -36,49 +33,25 @@ func getEnv(key, defaultVal string) string {
 func worker(wg *sync.WaitGroup, client *http.Client, method string, url string, id int) {
 	defer wg.Done()
 	for {
-		payload := payload{
-			Name:        "string",
-			Description: "string",
-			Password:    "string",
-			Email:       "string",
-			Phone:       "string",
-			Address:     "string",
-			City:        "string",
-			State:       "string",
-			Zip:         "string",
-		}
-
-		bodyBytes, err := json.Marshal(payload)
-		if err != nil {
-			fmt.Printf("[worker %d] json marshal error: %v\n", id, err)
-			continue
-		}
-
-		req, err := http.NewRequest(method, url, bytes.NewReader(bodyBytes))
+		resp, err := http.Get(url)
 		if err != nil {
 			fmt.Printf("[worker %d] request error: %v\n", id, err)
 			continue
 		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Length", fmt.Sprintf("%d", len(bodyBytes)))
-
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Printf("[worker %d] error: %v\n", id, err)
-			continue
+		if resp.StatusCode == 403 {
+			fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+			return
 		}
-		fmt.Println("[worker", id, "]", "fired request to", url, "status code:", resp.StatusCode)
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		time.Sleep(time.Duration(30 * time.Second))
+		fmt.Print("[worker", id, "]", "fired request to", url, "status code:", resp.StatusCode, "\n")
+		defer resp.Body.Close() // Ensure the response body is closed
 	}
 }
 
 func main() {
 	baseURL := getEnv("target_host", "http://ips:8080")
-	routeStr := getEnv("target_routes", "/ddos/login")
-	methodStr := getEnv("target_method", "POST")
-	concurrency := getEnv("concurrency", "10")
+	routeStr := getEnv("target_routes", "/")
+	methodStr := getEnv("target_method", "GET")
+	concurrency := getEnv("concurrency", "1")
 
 	routes := strings.Split(routeStr, ",")
 	numWorkers := 10

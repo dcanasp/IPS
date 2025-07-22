@@ -5,11 +5,13 @@ public class ScoringMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly IMemoryCache _cache;
+    private readonly RiskAssessor _riskAssessor;
 
-    public ScoringMiddleware(RequestDelegate next, IMemoryCache cache)
+    public ScoringMiddleware(RequestDelegate next, IMemoryCache cache, RiskAssessor riskAssessor)
     {
         _next = next;
         _cache = cache;
+        _riskAssessor = riskAssessor;
     }
 
     public async Task Invoke(HttpContext context)
@@ -29,9 +31,12 @@ public class ScoringMiddleware
         _cache.Set(key, logs); // Update
 
         // ---- Feature extraction ----
-        var requestRate = logs.Count / 1.0; // per minute
+        var requestRate = logs.Count / 1.0; //HERE
         var uniquePaths = logs.Select(r => r.Path).Distinct().Count();
-        var headerChangeRate = logs.Select(r => r.Headers.GetValueOrDefault("User-Agent", "")).Distinct().Count();
+        var headerChangeRate = logs
+            .Select(r => r.Headers.GetValueOrDefault("Authorization", "") +
+                          r.Headers.GetValueOrDefault("User-Agent", ""))
+            .Distinct().Count();
         var avgContentLength = logs.Select(r => r.ContentLength).DefaultIfEmpty(0).Average();
         var stddevPayload = Math.Sqrt(logs
             .Select(r => Math.Pow(r.ContentLength - avgContentLength, 2))
@@ -39,28 +44,31 @@ public class ScoringMiddleware
 
         var invalidPaths = logs.Count(r =>
             r.Path.StartsWith("/admin") || r.Path.Contains("..") || r.Path.StartsWith("/undefined"));
+        var FailedResponseCodes = logs.Select(r => r.ResponseCode)
+            .Where(code => code is >= 400 and < 600).Count();
+        var errorRate = (double)(invalidPaths + FailedResponseCodes) / logs.Count;
 
-        var errorRate = (double)invalidPaths / logs.Count;
+        var riskScore = _riskAssessor.CalculateRiskScore(requestRate, errorRate, headerChangeRate, stddevPayload, uniquePaths);
 
-        // ---- Scoring logic ----
-        double score = 0;
-        score += requestRate * 1.0;
-        score += uniquePaths > 10 ? 2 : 0;
-        score += headerChangeRate > 3 ? 2 : 0;
-        score += stddevPayload < 10 ? 2 : 0; // All payloads the same
-        score += errorRate > 0.2 ? 2 : 0;
+        //// ---- Scoring logic ----
+        //double score = 0;
+        //score += requestRate * 1.0;
+        //score += uniquePaths > 10 ? 2 : 0;
+        //score += headerChangeRate > 3 ? 2 : 0;
+        //score += stddevPayload < 10 ? 2 : 0;
+        //score += errorRate > 0.2 ? 2 : 0;
 
-        if (score > 10)
+        if (riskScore > _riskAssessor.BAN_THRESHOLD)
         {
             var banInfo = new BanInfo
             {
                 Reason = "High score from abnormal behavior",
-                Score = score,
+                Score = riskScore,
                 BannedAt = now,
                 ExpiresAt = now.AddMinutes(10)
             };
-            _cache.Set($"ban:{ip}", banInfo, TimeSpan.FromMinutes(10));
-            Console.WriteLine($"[!] Blocking IP: {ip} | Score: {score:F2}");
+            _cache.Set($"ban:{ip}", banInfo, TimeSpan.FromMinutes(1));//HERE
+            Console.WriteLine($"[!] Blocking IP: {ip} | Score: {riskScore:F2}");
             context.Response.StatusCode = 403;
             await context.Response.WriteAsync("Blocked by IPS.");
             return;

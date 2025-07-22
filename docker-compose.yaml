@@ -30,60 +30,44 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 1
-  explorationAttacker:
+      replicas: 2
+  exploration-attacker:
     build:
       context: ./attackers/exploration
     environment:
       - target_host=http://ips:8080
-      - target_routes=/
       - concurrency=1
     networks:
       - cyber 
     depends_on:
       - victim
     deploy:
-      replicas: 1
-  slowerAttacker:
+      replicas: 2
+  slower-attacker:
     build:
       context: ./attackers/slowerFaster
     environment:
       - target_host=http://ips:8080
-      - target_routes=/
       - concurrency=1
     networks:
       - cyber 
     depends_on:
       - victim
     deploy:
-      replicas: 1
+      replicas: 2
+  error-attacker:
+    build:
+      context: ./attackers/error
+    environment:
+      - target_host=http://ips:8080
+      - concurrency=1
+    networks:
+      - cyber 
+    depends_on:
+      - victim
+    deploy:
+      replicas: 2
 
-
-  # attacker1:
-  #   build:
-  #     context: ./attacker
-  #   container_name: attacker1
-  #   environment:
-  #     - target_host=http://victim:8080
-  #     - target_routes=/ddos/login
-  #     - concurrency=30
-  #   networks:
-  #   - cyber 
-  #   depends_on:
-  #     - victim
-
-  # attacker2:
-  #   build:
-  #     context: ./attacker
-  #   container_name: attacker2
-  #   environment:
-  #     - TARGET_HOST=http://victim:8080
-  #     - TARGET_ROUTES=/ddos/login
-  #     - CONCURRENCY=20
-  #   depends_on:
-  #     - victim
-  #   networks:
-  #   - cyber 
 
 networks:
   cyber:

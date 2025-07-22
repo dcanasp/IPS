@@ -68,6 +68,10 @@ func sendRequest(client *http.Client, method string, url string, p payload, id i
 		time.Sleep(1 * time.Second) // Small delay on error
 		return
 	}
+	if resp.StatusCode == 403 {
+		fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+		return
+	}
 	fmt.Printf("[worker %d] (Mode: %s, Sleep: %v) fired %s request to %s status code: %d\n", id, modeStatus, sleepDuration, method, url, resp.StatusCode)
 	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
