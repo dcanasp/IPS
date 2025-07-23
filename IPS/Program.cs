@@ -1,5 +1,7 @@
+using IPS;
 using Microsoft.AspNetCore.HttpOverrides;
-
+using Serilog;
+using Serilog.Events;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<RiskAssessor>();
@@ -37,12 +39,29 @@ builder.Services.AddReverseProxy()
                 ClusterId = "victim-cluster",
                 Destinations = new Dictionary<string, Yarp.ReverseProxy.Configuration.DestinationConfig>
                 {
-                    //{ "dest1", new() { Address = "http://localhost:5282/" } }
-                    { "dest1", new() { Address = "http://victim:8080/" } }
+                    { "dest1", new() { Address = "http://localhost:5282/" } }
+                    //{ "dest1", new() { Address = "http://victim:8080/" } }
 
                 }
             }
         });
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() // Set your desired minimum level
+    .Enrich.FromLogContext() // Allows adding properties dynamically
+                             // You can add properties like TraceId and SpanId via log context if you integrate with a tracing system later
+    .WriteTo.File(
+        formatter: new OpenTelemetryLikeJsonFormatter(),
+        path: "/app/logs/ips-service.json", // Path inside the Docker container
+        rollingInterval: RollingInterval.Day, // Or None, depending on expected log volume for 30 min
+        restrictedToMinimumLevel: LogEventLevel.Information, // Only log info and above to file
+        buffered: false // For low resource, potentially better to write directly
+    )
+    .WriteTo.Console() // Keep console output for debugging during development
+    .CreateLogger();
+
+builder.Logging.ClearProviders(); // Clear default .NET Core loggers
+builder.Logging.AddSerilog();
 
 var app = builder.Build();
 

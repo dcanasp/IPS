@@ -2,6 +2,9 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
+using victim;
 using victim.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +47,24 @@ builder.Services.AddSwaggerGen(options =>
                 options.AddSecurityDefinition("Bearer", securityScheme);
                 options.AddSecurityRequirement(securityRequirement);
             });
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() // Set your desired minimum level
+    .Enrich.FromLogContext() // Allows adding properties dynamically
+                             // You can add properties like TraceId and SpanId via log context if you integrate with a tracing system later
+    .WriteTo.File(
+        formatter: new OpenTelemetryLikeJsonFormatter(),
+        path: "/app/logs/victim-service.json", // Path inside the Docker container
+        rollingInterval: RollingInterval.Day, // Or None, depending on expected log volume for 30 min
+        restrictedToMinimumLevel: LogEventLevel.Information, // Only log info and above to file
+        buffered: false // For low resource, potentially better to write directly
+    )
+    .WriteTo.Console() // Keep console output for debugging during development
+    .CreateLogger();
+
+builder.Logging.ClearProviders(); // Clear default .NET Core loggers
+builder.Logging.AddSerilog();
+
 builder.Services.AddScoped<victim.Utils.AuthUtils>();
 builder.Services.AddScoped<Users>();
 builder.Services.AddHealthChecks();

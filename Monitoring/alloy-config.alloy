@@ -1,0 +1,46 @@
+loki.source.file "victim_service_logs_source" {
+  targets = [{
+    __path__ = "/mnt/logs_to_process/copied-victim-logs.json",
+    job = "victim-service",
+  }]
+  forward_to = [loki.process.victim_service_pipeline.receiver]
+}
+
+loki.process "victim_service_pipeline" {
+  stage.json {
+    expressions = {
+      timestamp = "timestamp",
+      trace_id = "traceId",
+      span_id = "spanId",
+      severity_text = "severityText",
+      body = "body",
+      service_name = "resource.service.name",
+      service_instance_id = "resource.service.instance.id",
+    }
+  }
+
+  stage.labels {
+    values = {
+      trace_id = "trace_id",
+      span_id = "span_id",
+      severity_text = "severity_text",
+      service_name = "service_name",
+      service_instance_id = "service_instance_id",
+    }
+  }
+
+  stage.output {
+    source = "body"
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+  external_labels = {
+    component = "grafana-alloy",
+  }
+}

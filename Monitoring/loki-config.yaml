@@ -1,0 +1,28 @@
+auth_enabled: false
+server:
+  http_listen_port: 3100
+common:
+  path_prefix: /tmp/loki_data # Changed to avoid conflict with potential rule_path
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+schema_config:
+  configs:
+    - from: 2020-10-27
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+# ruler:
+#   storage:
+#     type: local
+#   rule_path: /tmp/rules # Corrected writable path inside container
+#   alertmanager_url: http://localhost:9093
+
+limits_config:
+  allow_structured_metadata: false
+  reject_old_samples: false
