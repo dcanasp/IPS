@@ -30,7 +30,7 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
+      replicas: 5
   exploration-attacker:
     build:
       context: ./attackers/exploration
@@ -42,7 +42,7 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
+      replicas: 5
   slower-attacker:
     build:
       context: ./attackers/slowerFaster
@@ -54,7 +54,7 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
+      replicas: 5
   error-attacker:
     build:
       context: ./attackers/error
@@ -66,7 +66,7 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
+      replicas: 5
   hijacker-attacker:
     build:
       context: ./attackers/hijacker
@@ -78,8 +78,8 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
-  bruteForce-attacker:
+      replicas: 5
+  bruteforce-attacker:
     build:
       context: ./attackers/bruteForce
     environment:
@@ -90,7 +90,7 @@ services:
     depends_on:
       - victim
     deploy:
-      replicas: 2
+      replicas: 5
 
 
     
@@ -98,53 +98,53 @@ services:
 
 
 
-  loki:
-    image: grafana/loki:latest
-    container_name: loki
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    volumes:
-      # Mount Loki's config from your host. Use absolute path for robustness on Windows.
-      - C:\David\nacional\crypto\project\Monitoring\loki-config.yaml:/etc/loki/local-config.yaml
-      # Persistent volume for Loki's data. This is good for stability.
-      - loki_data:/tmp/loki # This will create a named Docker volume for Loki's data
-    networks:
-      - cyber
+#   loki:
+#     image: grafana/loki:latest
+#     container_name: loki
+#     ports:
+#       - "3100:3100"
+#     command: -config.file=/etc/loki/local-config.yaml
+#     volumes:
+#       # Mount Loki's config from your host. Use absolute path for robustness on Windows.
+#       - C:\David\nacional\crypto\project\Monitoring\loki-config.yaml:/etc/loki/local-config.yaml
+#       # Persistent volume for Loki's data. This is good for stability.
+#       - loki_data:/tmp/loki # This will create a named Docker volume for Loki's data
+#     networks:
+#       - cyber
 
-  grafana-alloy:
-    image: grafana/alloy:latest
-    container_name: grafana-alloy
-    volumes:
-      # Mount Alloy's config from your host.
-      - ./Monitoring/alloy-config.alloy:/etc/alloy/config.alloy
-      # This is the volume to access your COPIED logs.
-      # You need to create a folder on your host, e.g., 'C:\David\nacional\crypto\project\copied_logs\'
-      # and place 'copied-victim-logs.json' inside it after docker cp.
-      - C:\David\nacional\crypto\project\copied_logs:/mnt/logs_to_process:ro # Read-only mount
-    command: run /etc/alloy/config.alloy
-    depends_on:
-      - loki # Alloy needs Loki to push logs to
-      # No dependency on victim here, as it reads from a host volume.
-    networks:
-      - cyber
+#   grafana-alloy:
+#     image: grafana/alloy:latest
+#     container_name: grafana-alloy
+#     volumes:
+#       # Mount Alloy's config from your host.
+#       - ./Monitoring/alloy-config.alloy:/etc/alloy/config.alloy
+#       # This is the volume to access your COPIED logs.
+#       # You need to create a folder on your host, e.g., 'C:\David\nacional\crypto\project\copied_logs\'
+#       # and place 'copied-victim-logs.json' inside it after docker cp.
+#       - C:\David\nacional\crypto\project\copied_logs:/mnt/logs_to_process:ro # Read-only mount
+#     command: run /etc/alloy/config.alloy
+#     depends_on:
+#       - loki # Alloy needs Loki to push logs to
+#       # No dependency on victim here, as it reads from a host volume.
+#     networks:
+#       - cyber
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      # Persistent volume for Grafana's data.
-      - grafana_data:/var/lib/grafana # This will create a named Docker volume for Grafana's data
-    depends_on:
-      - loki
-    networks:
-      - cyber
+#   grafana:
+#     image: grafana/grafana:latest
+#     container_name: grafana
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       # Persistent volume for Grafana's data.
+#       - grafana_data:/var/lib/grafana # This will create a named Docker volume for Grafana's data
+#     depends_on:
+#       - loki
+#     networks:
+#       - cyber
 
-volumes:
-  loki_data: # Declare the named volume for Loki's internal data
-  grafana_data: # Declare the named volume for Grafana's data
+# volumes:
+#   loki_data: # Declare the named volume for Loki's internal data
+#   grafana_data: # Declare the named volume for Grafana's data
 
 networks:
   cyber:

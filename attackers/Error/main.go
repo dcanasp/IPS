@@ -67,7 +67,8 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath s
 			continue
 		}
 
-		bodyContent, err := io.ReadAll(resp.Body)
+		_, err = io.ReadAll(resp.Body)
+		// bodyContent, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Printf("[worker %d] error reading response body: %v\n", id, err)
 			resp.Body.Close()
@@ -75,10 +76,10 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath s
 		}
 		resp.Body.Close()
 
-		if string(bodyContent) == "Blocked by IPS." {
-			fmt.Println("[worker", id, "]", "Blocked by IPS, stopping")
-			return
-		}
+		// if string(bodyContent) == "Blocked by IPS." {
+		// 	fmt.Println("[worker", id, "]", "Blocked by IPS, stopping")
+		// 	return
+		// }
 		fmt.Printf("[worker %d] fired %s request to %s with incorrect payload. Status code: %d\n", id, method, targetURL, resp.StatusCode)
 
 		time.Sleep(time.Duration(rand.Intn(100)+10) * time.Millisecond)

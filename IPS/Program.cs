@@ -39,8 +39,8 @@ builder.Services.AddReverseProxy()
                 ClusterId = "victim-cluster",
                 Destinations = new Dictionary<string, Yarp.ReverseProxy.Configuration.DestinationConfig>
                 {
-                    { "dest1", new() { Address = "http://localhost:5282/" } }
-                    //{ "dest1", new() { Address = "http://victim:8080/" } }
+                    //{ "dest1", new() { Address = "http://localhost:5282/" } }
+                    { "dest1", new() { Address = "http://victim:8080/" } }
 
                 }
             }

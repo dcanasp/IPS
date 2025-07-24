@@ -219,6 +219,10 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath s
 		}
 		defer resp.Body.Close()
 
+		// if resp.StatusCode == 403 {
+		// 	fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+		// 	return
+		// }
 		fmt.Printf("[worker %d] Attempted access to %s with manipulated token/headers. Status: %d\n", id, targetURL, resp.StatusCode)
 		io.Copy(io.Discard, resp.Body) // Discard response body
 

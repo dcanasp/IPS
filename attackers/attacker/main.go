@@ -38,10 +38,10 @@ func worker(wg *sync.WaitGroup, client *http.Client, method string, url string, 
 			fmt.Printf("[worker %d] request error: %v\n", id, err)
 			continue
 		}
-		if resp.StatusCode == 403 {
-			fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
-			return
-		}
+		// if resp.StatusCode == 403 {
+		// 	fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+		// 	return
+		// }
 		fmt.Print("[worker", id, "]", "fired request to", url, "status code:", resp.StatusCode, "\n")
 		defer resp.Body.Close() // Ensure the response body is closed
 	}

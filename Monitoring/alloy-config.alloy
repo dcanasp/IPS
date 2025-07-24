@@ -1,6 +1,6 @@
 loki.source.file "victim_service_logs_source" {
   targets = [{
-    __path__ = "/mnt/logs_to_process/copied-victim-logs.json",
+    __path__ = "/mnt/logs_to_process/*.json",
     job = "victim-service",
   }]
   forward_to = [loki.process.victim_service_pipeline.receiver]

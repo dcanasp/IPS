@@ -44,19 +44,19 @@ type AttackerRequest struct {
 }
 
 // sendRequest is a helper function to encapsulate the HTTP request logic
-func sendRequest(client *http.Client, method string, url string, p payload, id int, modeStatus string, sleepDuration time.Duration) {
+func sendRequest(client *http.Client, method string, url string, p payload, id int, modeStatus string, sleepDuration time.Duration) error {
 	bodyBytes, err := json.Marshal(p)
 	if err != nil {
 		fmt.Printf("[worker %d] json marshal error: %v\n", id, err)
 		time.Sleep(1 * time.Second) // Small delay on error
-		return
+		return nil
 	}
 
 	req, err := http.NewRequest(method, url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		fmt.Printf("[worker %d] request error: %v\n", id, err)
 		time.Sleep(1 * time.Second) // Small delay on error
-		return
+		return nil
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(bodyBytes)))
@@ -66,15 +66,16 @@ func sendRequest(client *http.Client, method string, url string, p payload, id i
 	if err != nil {
 		fmt.Printf("[worker %d] error: %v\n", id, err)
 		time.Sleep(1 * time.Second) // Small delay on error
-		return
+		return nil
 	}
-	if resp.StatusCode == 403 {
-		fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
-		return
-	}
+	// if resp.StatusCode == 403 {
+	// 	fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+	// 	return fmt.Errorf("403 Forbidden")
+	// }
 	fmt.Printf("[worker %d] (Mode: %s, Sleep: %v) fired %s request to %s status code: %d\n", id, modeStatus, sleepDuration, method, url, resp.StatusCode)
 	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
+	return nil
 }
 
 // worker for Slower/Faster Attacker
@@ -122,8 +123,11 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, id int) {
 				State:       "string",
 				Zip:         "string",
 			}
-			sendRequest(client, reqDef.Method, baseURL+reqDef.Path, p, id, "INITIAL", 0) // No specific sleep/mode for initial
-			time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond)             // Small delay between initial sequence steps
+			err := sendRequest(client, reqDef.Method, baseURL+reqDef.Path, p, id, "INITIAL", 0) // No specific sleep/mode for initial
+			if err != nil {
+				return
+			}
+			time.Sleep(time.Duration(rand.Intn(500)+100) * time.Millisecond) // Small delay between initial sequence steps
 		} else {
 			// Once we hit the first loop request, enter the infinite loop for the remaining requests
 			loopStartIndex := i          // This is the index where the infinite loop starts in the sequence
@@ -155,14 +159,16 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, id int) {
 					Zip:         "75001",
 				}
 
-				sendRequest(client, reqToExecute.Method, baseURL+reqToExecute.Path, p, id, func() string {
+				err := sendRequest(client, reqToExecute.Method, baseURL+reqToExecute.Path, p, id, func() string {
 					if isFastMode {
 						return "FAST"
 					} else {
 						return "SLOW"
 					}
 				}(), sleepDuration)
-
+				if err != nil {
+					return
+				}
 				time.Sleep(sleepDuration) // Apply the calculated sleep duration
 
 				requestsInCurrentMode++

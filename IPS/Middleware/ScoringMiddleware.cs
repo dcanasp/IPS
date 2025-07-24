@@ -37,10 +37,14 @@ public class ScoringMiddleware
             .Select(r => r.Headers.GetValueOrDefault("Authorization", "") +
                           r.Headers.GetValueOrDefault("User-Agent", ""))
             .Distinct().Count();
+        var minContentLength = logs.Select(r => r.ContentLength).DefaultIfEmpty(0).Min();
+        var maxContentLength = logs.Select(r => r.ContentLength).DefaultIfEmpty(0).Max();
         var avgContentLength = logs.Select(r => r.ContentLength).DefaultIfEmpty(0).Average();
         var stddevPayload = Math.Sqrt(logs
             .Select(r => Math.Pow(r.ContentLength - avgContentLength, 2))
             .DefaultIfEmpty(0).Average());
+        var range = maxContentLength - minContentLength;
+        var normalizedStddev = range > 0 ? stddevPayload / range : 0;
 
         var invalidPaths = logs.Count(r =>
             r.Path.StartsWith("/admin") || r.Path.Contains("..") || r.Path.StartsWith("/undefined"));
@@ -48,7 +52,7 @@ public class ScoringMiddleware
             .Where(code => code is >= 400 and < 600).Count();
         var errorRate = (double)(invalidPaths + FailedResponseCodes) / logs.Count;
 
-        var riskScore = _riskAssessor.CalculateRiskScore(requestRate, errorRate, headerChangeRate, stddevPayload, uniquePaths);
+        var riskScore = _riskAssessor.CalculateRiskScore(requestRate, errorRate, headerChangeRate, normalizedStddev, uniquePaths);
 
         //// ---- Scoring logic ----
         //double score = 0;

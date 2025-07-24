@@ -21,8 +21,8 @@ public class RiskAssessor
         var nRequestRate = Math.Min(1.0, requestRate / MAX_REQUEST_RATE);
         var nErrorRate = Math.Min(1.0, errorRate / MAX_ERROR_RATE);
         var nHeaderChangeRate = Math.Min(1.0, headerChangeRate / MAX_HEADER_CHANGE_RATE);
-        var nStddevPayload = Math.Min(1.0, Math.Max(1.0, stddevPayload / MAX_STDDEV_PAYLOAD));//esto siempre dara 1
-        var nUniquePaths = 1 - Math.Min(1.0, uniquePaths / MAX_UNIQUE_PATHS);
+        var nStddevPayload = 2 * Math.Abs(0.5 - stddevPayload);
+        var nUniquePaths = (uniquePaths > MAX_UNIQUE_PATHS) ? 1 : 0;
 
         // 2. Calculate the weighted sum
         double riskScore =

